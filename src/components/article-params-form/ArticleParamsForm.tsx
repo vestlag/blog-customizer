@@ -13,6 +13,8 @@ import {
 	contentWidthArr,
 	fontSizeOptions,
 } from 'src/constants/articleProps';
+import { useCloseOnOutsideClickOrEsc } from 'src/hooks/useCloseOnOutsideClickOrEsc';
+import clsx from 'clsx';
 
 import styles from './ArticleParamsForm.module.scss';
 
@@ -22,6 +24,8 @@ interface ArticleParamsFormProps {
 	onReset: () => void;
 }
 
+type FormField = keyof ArticleStateType;
+
 export const ArticleParamsForm = ({
 	currentParams,
 	onApply,
@@ -30,6 +34,12 @@ export const ArticleParamsForm = ({
 	const [isOpen, setIsOpen] = useState(false);
 	const [formState, setFormState] = useState<ArticleStateType>(currentParams);
 	const sidebarRef = useRef<HTMLDivElement>(null);
+
+	useCloseOnOutsideClickOrEsc({
+		isOpenElement: isOpen,
+		elementRef: sidebarRef,
+		onClose: () => setIsOpen(false),
+	});
 
 	useEffect(() => {
 		if (isOpen) {
@@ -41,74 +51,53 @@ export const ArticleParamsForm = ({
 		setIsOpen(!isOpen);
 	};
 
-	useEffect(() => {
-		const handleClickOutside = (event: MouseEvent) => {
-			if (
-				isOpen &&
-				sidebarRef.current &&
-				!sidebarRef.current.contains(event.target as Node)
-			) {
-				setIsOpen(false);
-			}
-		};
-
-		document.addEventListener('mousedown', handleClickOutside);
-		return () => {
-			document.removeEventListener('mousedown', handleClickOutside);
-		};
-	}, [isOpen]);
+	const handleFieldChange = (fieldName: FormField, value: any) => {
+		setFormState((prev) => ({
+			...prev,
+			[fieldName]: value,
+		}));
+	};
 
 	const handleFontFamilyChange = (
 		selectedOption: typeof defaultArticleState.fontFamilyOption
 	) => {
-		setFormState((prev) => ({
-			...prev,
-			fontFamilyOption: selectedOption,
-		}));
+		handleFieldChange('fontFamilyOption', selectedOption);
 	};
 
 	const handleFontColorChange = (
 		selectedOption: typeof defaultArticleState.fontColor
 	) => {
-		setFormState((prev) => ({
-			...prev,
-			fontColor: selectedOption,
-		}));
+		handleFieldChange('fontColor', selectedOption);
 	};
 
 	const handleBackgroundColorChange = (
 		selectedOption: typeof defaultArticleState.backgroundColor
 	) => {
-		setFormState((prev) => ({
-			...prev,
-			backgroundColor: selectedOption,
-		}));
+		handleFieldChange('backgroundColor', selectedOption);
 	};
 
 	const handleContentWidthChange = (
 		selectedOption: typeof defaultArticleState.contentWidth
 	) => {
-		setFormState((prev) => ({
-			...prev,
-			contentWidth: selectedOption,
-		}));
+		handleFieldChange('contentWidth', selectedOption);
 	};
 
 	const handleFontSizeChange = (
 		selectedOption: typeof defaultArticleState.fontSizeOption
 	) => {
-		setFormState((prev) => ({
-			...prev,
-			fontSizeOption: selectedOption,
-		}));
+		handleFieldChange('fontSizeOption', selectedOption);
 	};
 
-	const handleApply = () => {
+	// Обработчик отправки формы
+	const handleSubmit = (e: React.FormEvent) => {
+		e.preventDefault();
 		onApply(formState);
 		setIsOpen(false);
 	};
 
-	const handleReset = () => {
+	// Обработчик сброса формы
+	const handleFormReset = (e: React.FormEvent) => {
+		e.preventDefault();
 		setFormState(defaultArticleState);
 		onReset();
 	};
@@ -118,10 +107,13 @@ export const ArticleParamsForm = ({
 			<ArrowButton isOpen={isOpen} onClick={handleToggle} />
 			<aside
 				ref={sidebarRef}
-				className={`${styles.container} ${
-					isOpen ? styles.container_open : ''
-				}`}>
-				<div className={styles.form}>
+				className={clsx(styles.container, {
+					[styles.container_open]: isOpen,
+				})}>
+				<form
+					className={styles.form}
+					onSubmit={handleSubmit}
+					onReset={handleFormReset}>
 					<h2
 						style={{
 							fontSize: '24px',
@@ -204,20 +196,10 @@ export const ArticleParamsForm = ({
 					<Separator />
 
 					<div className={styles.bottomContainer}>
-						<Button
-							title='Сбросить'
-							htmlType='button'
-							type='clear'
-							onClick={handleReset}
-						/>
-						<Button
-							title='Применить'
-							htmlType='button'
-							type='apply'
-							onClick={handleApply}
-						/>
+						<Button title='Сбросить' htmlType='reset' type='clear' />
+						<Button title='Применить' htmlType='submit' type='apply' />
 					</div>
-				</div>
+				</form>
 			</aside>
 		</>
 	);
